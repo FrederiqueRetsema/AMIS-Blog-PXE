@@ -1,5 +1,5 @@
 # AMIS-Blog-PXE
-Code for creating a PXE server on CentOS 8 (and example configuration files). This is the code that belongs to a blog on the AMIS website https://technology.amis.nl/ that will describe how to create a PXE server in CentOS8 by hand. There is a lot to configure, so many things can go wrong. This github repository might help you to figure out what is going on in your environment, both by giving you scripts for your own environment and by putting the resulting files on github. You can also use the setup script to create the environment for you. 
+Code for creating a PXE server on CentOS 8 (and example configuration files). This is the code that belongs to a blog on the AMIS website https://technology.amis.nl/ that will describe how to create a PXE server in CentOS8 by hand. There is a lot to configure, so many things can go wrong. This github repository might help you to figure out what is going on in your environment, both by giving you scripts to create your own environment and by putting the resulting files on github. 
 
 To use the scripts:
 - Download CentOS8 ( https://www.centos.org/download )
@@ -13,7 +13,7 @@ To use the scripts:
 - Change the upper part of the script install-pxe for your (network-)settings, after that:
     . ./install-pxe.sh	
 
-When something doesn't work, please check the following remarks:
+When something doesn't work, please check the following:
 - I put the configuration files of my (working) system in this github repository, you might check the differences with your system
 - Did you change the names of directories and files in the upper part of the powershell scripts?
 - Did you change the IP-address and the network settings in the installation script to addresses in your own network? 
