@@ -1,6 +1,6 @@
 # Please look carefully to these settings, these will be used for configuration of the PXE server
 #
-PXESERVER_IP_ADDRESS=192.168.2.128
+PXESERVER_IP_ADDRESS=192.168.2.131
 PXESERVER_DOMAIN_NAME="mydomain"
 PXESERVER_SUBNET_MASK=255.255.255.0
 PXESERVER_BROADCAST_ADDRESS=192.168.2.255

@@ -1,0 +1,7 @@
+DEFAULT menu.c32
+PROMPT 0
+TIMEOUT 30
+LABEL centos8s
+MENU CentOS 8 Server
+KERNEL /networkboot/vmlinuz
+APPEND initrd=/networkboot/initrd.img inst.repo=ftp://192.168.2.131/CentOS8 ks=ftp://192.168.2.131/centos8.cfg

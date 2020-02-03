@@ -1,0 +1,11 @@
+[Unit]
+Description=TFTP Service
+Documentation=man:in.tftpd
+
+[Service]
+ExecStart=/usr/sbin/in.tftpd -s -vvv -l -a :69 -r blksize -P /var/run/tftpd.pid /var/lib/tftpboot
+ExecStop=/bin/kill -15 
+PIDFile=/var/run/tftpd.pid
+
+[Install]
+WantedBy=multi-user.target
