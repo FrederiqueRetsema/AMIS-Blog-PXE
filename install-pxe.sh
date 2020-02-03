@@ -35,6 +35,19 @@ CONFIGFILE_TFTPD_SERVICE=/etc/systemd/system/tftpd.service
 
 # Functions
 # ---------
+
+check_ip_address() {
+    IPCHECK=`ip address show | grep $PXESERVER_IP_ADDRESS`
+    if (test -z "$IPCHECK") 
+    then
+        	echo "Check: result of IP-check: Other IP Address: this server doesn't have IP Address $PXESERVER_IP_ADDRESS"
+        	echo "Advice: change the settings in this script before running it!"
+            exit 1
+    else 
+        	echo "Check: - Result: IP Address matches one of the server IP addresses, continue"
+    fi
+}
+
 check_existing_file() {
     TEMPDIR=$1
     FILE=$2
@@ -47,6 +60,23 @@ check_existing_file() {
         echo "Check: - File $FILE doesn't exist (yet)"
     fi
 } 
+
+check_dvd_present() {
+    if (! test -f /mnt/.treeinfo)
+    then
+            echo "Check: - Result: CentOS disk not present in /mnt. Try to mount /dev/cdrom to /mnt..."
+            mount /dev/cdrom /mnt
+            if (test $? -eq 0)
+            then
+                echo "  - Mount succesful"
+            else
+                echo "Mount not succesful, exit"
+                exit 1
+            fi
+    else
+            echo "Check: - Result: CentOS disk present in /mnt"
+    fi
+}
 
 check_file() {
     TAGNAME=$1
@@ -81,31 +111,10 @@ create_dir_if_necessary() {
 # - Configfile DHCP must not have any non-empty lines that doesn't start with # 
 
 echo "Check: IP Address: must be one of the IP addresses of this server"
-IPCHECK=`ip address show | grep $PXESERVER_IP_ADDRESS`
-if (test -z "$IPCHECK") 
-then
-	echo "Check: result of IP-check: Other IP Address: this server doesn't have IP Address $PXESERVER_IP_ADDRESS"
-	echo "Advice: change the settings in this script before running it!"
-        exit 1
-else 
-	echo "Check: - Result: IP Address matches one of the server IP addresses, continue"
-fi
+check_ip_address
 
 echo "Check: DVD present in /mnt?"
-if (! test -f /mnt/.treeinfo)
-then
-        echo "Check: - Result: CentOS disk not present in /mnt. Try to mount /dev/cdrom to /mnt..."
-        mount /dev/cdrom /mnt
-        if (test $? -eq 0)
-        then
-            echo "  - Mount succesful"
-        else
-            echo "Mount not succesful, exit"
-            exit 1
-        fi
-else
-        echo "Check: - Result: CentOS disk present in /mnt"
-fi
+check_dvd_present
 
 # Check existing files, if they exist - make a backup
 #
@@ -116,6 +125,9 @@ check_existing_file $TEMPDIR $CONFIGFILE_PXE
 check_existing_file $TEMPDIR $CONFIGFILE_KS
 check_existing_file $TEMPDIR $CONFIGFILE_TFTPD_SERVICE
 
+# Install updates and software
+#
+
 echo "Install updates and software..."
 
 yum update -y
@@ -124,7 +136,8 @@ yum install epel-release -y
 yum install dhcp-server ftp vsftpd syslinux tftp tftp-server -y
 
 # DHCP
-# ----
+# 
+
 echo "DHCP: change $CONFIGFILE_DHCP"
 
 echo "allow booting;" > $CONFIGFILE_DHCP
@@ -144,7 +157,10 @@ echo "}" >> $CONFIGFILE_DHCP
 
 # TFTP
 # ----
+# \ before cp is necessary to be sure an eventual alias isn't used
+
 echo "TFTP: copy files"
+
 \cp -f /usr/share/syslinux/pxelinux.0  $DIR_TFTP
 \cp -f /usr/share/syslinux/memdisk     $DIR_TFTP
 \cp -f /usr/share/syslinux/menu.c32    $DIR_TFTP
@@ -154,14 +170,17 @@ echo "TFTP: copy files"
 \cp -f /usr/share/syslinux/libutil.c32 $DIR_TFTP
 
 echo "TFTP: $DIR_TFTP_NETWORKBOOT exists?" 
+
 create_dir_if_necessary "TFTP" $DIR_TFTP_NETWORKBOOT
 
 echo "TFTP: copy networkboot files" 
+
 \cp /mnt/images/pxeboot/vmlinuz $DIR_TFTP_NETWORKBOOT
 \cp /mnt/images/pxeboot/initrd.img $DIR_TFTP_NETWORKBOOT
 
 # FTP
-# ---
+# 
+
 echo "FTP: Change configfile"
 
 sed -i.bkp '/^anonymous_enable=NO/c anonymous_enable=YES'  $CONFIGFILE_FTP
@@ -170,7 +189,9 @@ sed -i.bkp '/^write_enable=YES/c write_enable=NO'  $CONFIGFILE_FTP
 
 echo "FTP: Change log output of FTP (optional)"
 
-# This is optional, comment the next lines out if you don't want to have excessive logfiles for ftp in /var/log/vsftpd.log
+# FTP: This is optional, comment the next lines out if you don't want to have excessive logfiles for ftp in /var/log/vsftpd.log
+#
+
 sed -i.bkp '/^xferlog_std_format=YES/c xferlog_std_format=NO'  $CONFIGFILE_FTP
 PXELINENO=`grep -rne xferlog_std_format $CONFIGFILE_FTP | awk -F":" '{print $1}'`
 sed -i.bkp "${PXELINENO}a log_ftp_protocol=YES" $CONFIGFILE_FTP
@@ -190,7 +211,8 @@ else
 fi
 
 # PXE
-# ---
+# 
+
 echo "PXE: $DIR_PXE_PXELINUX_CFG already exists?"
 
 create_dir_if_necessary "PXE" $DIR_PXE_PXELINUX_CFG
@@ -206,12 +228,14 @@ echo "KERNEL /$DIR_NETWORKBOOT/vmlinuz" >> $CONFIGFILE_PXE
 echo "APPEND initrd=/$DIR_NETWORKBOOT/initrd.img inst.repo=ftp://$PXESERVER_IP_ADDRESS/$DIR_CENTOS8 ks=ftp://$PXESERVER_IP_ADDRESS/$CONFIGFILE_KS_SHORT" >> $CONFIGFILE_PXE
 
 # KS
-# --
+#
+ 
 echo "KS: copy original $CONFIGFILE_KS_ORG file to $CONFIGFILE_KS and change permissions"
 \cp -f $CONFIGFILE_KS_ORG $CONFIGFILE_KS
 chmod 644 $CONFIGFILE_KS
 
 echo "KS: Make changes to $CONFIGFILE_KS"
+
 PXELINENO=`grep -rne "repo --name=\"AppStream\"" $CONFIGFILE_KS | awk -F":" '{print $1}'`
 sed -i.bkp "${PXELINENO}d" $CONFIGFILE_KS
 sed -i.bkp "${PXELINENO}i repo --name=centos-updates --mirrorlist=http://mirrorlist.centos.org/?release=\$releasever\&arch=\$basearch\&repo=BaseOS --cost=1000" $CONFIGFILE_KS
@@ -229,15 +253,22 @@ sed -i.bkp "${PXELINENO}a zerombr" $CONFIGFILE_KS
 # Firewall
 #
 
-echo "Firewall: change firewallsettings"
+echo "Firewall: check if chaning firewallsettings is necessary..."
+FWCHECK=`firewall-cmd --list-service | grep proxy-dhcp`
+if (test -z "$FWCHECK") 
+then
+    echo "- change settings is necessary"
 
-firewall-cmd --add-service=tftp --permanent
-firewall-cmd --add-service=ftp --permanent
-setsebool -P allow_ftpd_full_access 1
+    firewall-cmd --add-service=tftp --permanent
+    firewall-cmd --add-service=ftp --permanent
+    setsebool -P allow_ftpd_full_access 1
 
-firewall-cmd --add-service=proxy-dhcp --permanent
+    firewall-cmd --add-service=proxy-dhcp --permanent
 
-firewall-cmd --reload
+    firewall-cmd --reload
+else
+    echo "- change firewall settings is not necessary, continue"
+fi
 
 # Services
 #
@@ -257,6 +288,7 @@ echo "[Install]" >> $CONFIGFILE_TFTPD_SERVICE
 echo "WantedBy=multi-user.target" >> $CONFIGFILE_TFTPD_SERVICE
 
 echo "Services: (re)start + enable services"
+
 systemctl daemon-reload
 systemctl restart dhcpd
 systemctl enable dhcpd
@@ -274,7 +306,11 @@ echo "Testing: tftp"
 
 cd ~root
 rm -f menu.c32
-tftp localhost <<here
+
+# The reason for filtering out the error messages, is that sometimes tftp will timeout. The file is, however, present.
+# Because that's the only thing that counts, the errors (if any) are ignored. 
+
+tftp localhost 2> /dev/null <<here
 get menu.c32
 quit
 here
@@ -285,7 +321,8 @@ echo "Testing: ftp"
 
 rm -f $CONFIGFILE_KS_SHORT
 rm -f TRANS.TBL
-ftp -n <<here
+
+ftp -n <<here  > /tmp/ftp_output.$$ 2> /dev/null
 open localhost
 user ftp ftp
 get $CONFIGFILE_KS_SHORT
@@ -293,6 +330,12 @@ cd $DIR_CENTOS8
 get TRANS.TBL
 quit
 here
+
+# The reason for filtering out the warnings from the output, is that they are a result of not giving a cr + lf after each line within
+# the ftp. This is normal for a Linux system. The warnings can safely be ignored, the only thing that matters is that the two files
+# that we asked for should be present.
+# 
+cat /tmp/ftp_output.$$ | grep -v WARNING | grep -v "File may not have transferred correctly"
 
 check_file FTP ~root/$CONFIGFILE_KS_SHORT
 check_file FTP ~root/TRANS.TBL
