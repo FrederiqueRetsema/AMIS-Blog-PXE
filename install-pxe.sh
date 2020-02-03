@@ -7,6 +7,7 @@ PXESERVER_BROADCAST_ADDRESS=192.168.2.255
 PXESERVER_DOMAIN_NAME_SERVERS=192.168.2.254
 PXESERVER_ROUTERS=192.168.2.254
 PXESERVER_SUBNET=192.168.2.0
+PXESERVER_SUBNET_HEX=C0A802
 PXESERVER_MIN_RANGE=192.168.2.200
 PXESERVER_MAX_RANGE=192.168.2.210
 
@@ -25,7 +26,7 @@ mkdir $TEMPDIR
 
 CONFIGFILE_DHCP=/etc/dhcp/dhcpd.conf
 CONFIGFILE_FTP=/etc/vsftpd/vsftpd.conf
-CONFIGFILE_PXE=$DIR_PXE_PXELINUX_CFG/C0A802
+CONFIGFILE_PXE=$DIR_PXE_PXELINUX_CFG/$PXESERVER_SUBNET_HEX
 
 CONFIGFILE_KS_SHORT=centos8.cfg
 CONFIGFILE_KS_ORG=~root/anaconda-ks.cfg
@@ -253,7 +254,7 @@ sed -i.bkp "${PXELINENO}a zerombr" $CONFIGFILE_KS
 # Firewall
 #
 
-echo "Firewall: check if chaning firewallsettings is necessary..."
+echo "Firewall: check if changing firewallsettings is necessary..."
 FWCHECK=`firewall-cmd --list-service | grep proxy-dhcp`
 if (test -z "$FWCHECK") 
 then
