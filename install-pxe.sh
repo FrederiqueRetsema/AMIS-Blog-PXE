@@ -151,6 +151,7 @@ echo "TFTP: copy files"
 \cp -f /usr/share/syslinux/mboot.c32   $DIR_TFTP
 \cp -f /usr/share/syslinux/chain.c32   $DIR_TFTP
 \cp -f /usr/share/syslinux/ldlinux.c32 $DIR_TFTP
+\cp -f /usr/share/syslinux/libutil.c32 $DIR_TFTP
 
 echo "TFTP: $DIR_TFTP_NETWORKBOOT exists?" 
 create_dir_if_necessary "TFTP" $DIR_TFTP_NETWORKBOOT
