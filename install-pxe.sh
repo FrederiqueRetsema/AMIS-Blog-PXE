@@ -251,6 +251,8 @@ sed -i.bkp "/clearpart --/c clearpart --all" $CONFIGFILE_KS
 PXELINENO=`grep -rne "clearpart --" $CONFIGFILE_KS | awk -F":" '{print $1}'`
 sed -i.bkp "${PXELINENO}a zerombr" $CONFIGFILE_KS
 
+sed -i.bkp "/network  --bootproto=dhcp --device=eth0 --onboot=off --ipv6=auto --activate/cnetwork  --bootproto=dhcp --device=eth0 --ipv6=auto --activate" $CONFIGFILE_KS
+
 # Firewall
 #
 
