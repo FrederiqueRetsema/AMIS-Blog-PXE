@@ -63,10 +63,10 @@ check_existing_file() {
 } 
 
 check_dvd_present() {
-    if (! test -f /mnt/.treeinfo)
+    if (! test -f /media/.treeinfo)
     then
-            echo "Check: - Result: CentOS disk not present in /mnt. Try to mount /dev/cdrom to /mnt..."
-            mount /dev/cdrom /mnt
+            echo "Check: - Result: CentOS disk not present in /media. Try to mount /dev/cdrom to /media..."
+            mount /dev/cdrom /media
             if (test $? -eq 0)
             then
                 echo "  - Mount succesful"
@@ -75,7 +75,7 @@ check_dvd_present() {
                 exit 1
             fi
     else
-            echo "Check: - Result: CentOS disk present in /mnt"
+            echo "Check: - Result: CentOS disk present in /media"
     fi
 }
 
@@ -114,7 +114,7 @@ create_dir_if_necessary() {
 echo "Check: IP Address: must be one of the IP addresses of this server"
 check_ip_address
 
-echo "Check: DVD present in /mnt?"
+echo "Check: DVD present in /media?"
 check_dvd_present
 
 # Check existing files, if they exist - make a backup
@@ -176,8 +176,8 @@ create_dir_if_necessary "TFTP" $DIR_TFTP_NETWORKBOOT
 
 echo "TFTP: copy networkboot files" 
 
-\cp /mnt/images/pxeboot/vmlinuz $DIR_TFTP_NETWORKBOOT
-\cp /mnt/images/pxeboot/initrd.img $DIR_TFTP_NETWORKBOOT
+\cp /media/images/pxeboot/vmlinuz $DIR_TFTP_NETWORKBOOT
+\cp /media/images/pxeboot/initrd.img $DIR_TFTP_NETWORKBOOT
 
 # FTP
 # 
@@ -205,8 +205,8 @@ echo "FTP: Check if DVD is already copied..."
 if (! test -f $DIR_FTP_CENTOS8/.treeinfo) 
 then
     echo "FTP: - DVD not copied, copy DVD to local disk (this might take some time)"
-    cp -a /mnt/* $DIR_FTP_CENTOS8
-    cp -a /mnt/.treeinfo $DIR_FTP_CENTOS8
+    cp -a /media/* $DIR_FTP_CENTOS8
+    cp -a /media/.treeinfo $DIR_FTP_CENTOS8
 else
     echo "FTP: - DVD is already copied, continue..."
 fi
