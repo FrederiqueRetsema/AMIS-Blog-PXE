@@ -1,3 +1,11 @@
+# CreateLinuxPXE.ps1
+# ------------------
+# Written as part of a blog on the AMIS website, see https://technology.amis.nl or the pdf in this repository for more information
+#
+
+# Please look carefully to these settings, these will be used for configuration of the Hyper-V VM on your local machine
+#
+
 # Debugging
 $VerbosePreference="Continue"
 
@@ -27,7 +35,7 @@ $VMExists=$false
 
 function createDirectory {
   param ($DirName)
-  $continue=$true
+
   if (Test-Path $DirName -pathtype Container) {
 	Write-Verbose "Path $DirName already exists, no problem"
   } else {
@@ -36,16 +44,14 @@ function createDirectory {
 		New-Item -path $DirName -ItemType directory -ErrorAction Stop | Out-Null
 	} Catch {
 		Write-Verbose "Unable to create path $DirName"
-		${global:continue}=$false
+		exit 1
 	}
   }
-  return $continue
 }  
 
 function createVHD {
    param($DiskName)
 
-   $continue=$true   
    if (Test-Path $DiskName -PathType Leaf) {
        Write-Warning "Disk $DiskName already exists, will be used for further deployment"
    } else {
@@ -54,10 +60,9 @@ function createVHD {
 	       New-VHD -Path "$DiskName" -SizeBytes $DiskSize -ErrorAction Stop | Out-Null
 	   } Catch {
 	       Write-Error "Create disk failed, command was: New-VHD -Path ${DiskName} -SizeBytes ${DiskSize} -ErrorAction Stop"
-		   $continue=$false
+		   exit 2
 	   }
 	}
-	return $continue
 }
 
 function getSwitchName {
@@ -70,24 +75,22 @@ function getSwitchName {
 	} Catch {
 	    Write-Error "Error: $v"
 		Write-Error "Cannot determine switchname for $SwitchType switch"
+		exit 3
 	}
 	return $SwitchName
 }
 
 function testVMExists {
     param($HostName, $VMName)
-	$continue=$true
+
     Try {
       Get-VM -ComputerName $HostName -VMName $VMName -ErrorAction Stop | Out-Null
 	  Write-Error "$VMName already exists on $HostName, please configure by hand"
-      $VMExists=$true
-	  $continue=$false
+	  exit 4
 	} Catch {
 	  # Assume the error is caused by a non-existing VM, continue
 	  Write-Verbose "VM $VMName doesn't exist on $HostName, continue..."
-	  $VMExists=$false
 	}
-	return $continue
 }
 
 function createVM {
@@ -97,29 +100,25 @@ function createVM {
 	    New-VM -Name $VMName -MemoryStartupBytes $MemoryStartupBytes -Generation $Generation -BootDevice CD -Path $VMPath -VHDPath $DiskName -SwitchName $SwitchName -ErrorAction Stop -ErrorVariable $v
 	} Catch {
 	    Write-Error "Error creating new VM: $v"
-		$continue = $false
+		exit 5
 	}
 }
 
 function insertDVD {
     param($VMName, $DVDISOFile)
 	
-	$continue = $true
-	
 	Write-Verbose "Insert DVD $DVDISOFile ..."
 	Try {
 	    Set-VMDVDDrive -VMName $VMName -Path $DVDISOFile -Controllernumber 1 -ControllerLocation 0 -ErrorAction Stop
 	} Catch {
-	    Write-Warning "Error while inserting DVD ISO $DVDISOFile in the VM $VMName"
-		$continue = $true
+	    Write-Error "Error while inserting DVD ISO $DVDISOFile in the VM $VMName"
+		exit 6
 	}
-	return $continue
 }
 
 function useDynamicMemory {
     param($VMName)
 	
-	$continue=$true
 	$currentDynamicMemoryEnabled = (Get-VMMemory -VMName $VMName | Select -Property DynamicMemoryEnabled).DynamicMemoryEnabled
 	if ($CurrentDynamicMemoryEnabled) {
 	  Write-Verbose "Dynamic Memory is already enabled"
@@ -128,16 +127,13 @@ function useDynamicMemory {
 	    Write-Verbose "Enable Dynamic Memory"
 	    Set-VMMemory -VMName $VMName -DynamicMemoryEnabled:$true
 	  } Catch {
-	    Write-Warning "Unable to enable Dynamic Memory, continue..."
+	    Write-Error "Unable to enable Dynamic Memory, continue..."
 	  }
 	}
-	return $continue
 }
 
 function numberOfProcessors {
     param($VMName, $numberOfProcessors)
-	
-	$continue = $true
 	
 	$currentNumberOfProcessors = (Get-VMProcessor -VMName $VMName | Select -Property Count).count
 	if ($CurrentNumberOfProcessors -eq $numberOfProcessors) {
@@ -147,7 +143,7 @@ function numberOfProcessors {
 	    Write-Verbose "Change number of processors from $currentNumberOfProcessors to $numberOfProcessors"
 	    Set-VMProcessor -VMName $VMName -count $numberOfProcessors
 	  } Catch {
-	    Write-Warning "Unable to change number of processors to $numberOfProcessors ..."
+	    Write-Error "Unable to change number of processors to $numberOfProcessors ..."
 	  }
 	}
 	
@@ -155,13 +151,15 @@ function numberOfProcessors {
 	return $continue
 }
 # Main program
-$continue = createDirectory -DirName $VMBaseDirPath
-if ($continue) { $continue   = createDirectory -DirName $VirtualHardDiskPath }
-if ($continue) { $continue   = createDirectory -DirName $VMPath }
-if ($continue) { $continue   = createVHD -DiskName $DiskName }
-if ($continue) { $SwitchName = getSwitchName -SwitchType $SwitchType ; $continue = ($SwitchName -ne "")}
-if ($continue) { $continue   = testVMExists -HostName $HostName -VMName $VMName }
-if ($continue) { $continue   = createVM -VMName $VMName -MemoryStartupBytes $MemoryStartupBytes -Generation $Generation -VMPath $VMPath -DiskName $DiskName -SwitchName $SwitchName }
-if ($continue) { $continue   = insertDVD -VMName $VMName -DVDISOFile $DVDISOFile }
-if ($continue) { $continue   = useDynamicMemory -VMName $VMName }
-if ($continue) { $continue   = numberOfProcessors -VMName $VMName -NumberOfProcessors $NumberOfProcesses }
+createDirectory -DirName $VMBaseDirPath
+createDirectory -DirName $VirtualHardDiskPath 
+createDirectory -DirName $VMPath 
+
+createVHD -DiskName $DiskName 
+$SwitchName = getSwitchName -SwitchType $SwitchType
+
+testVMExists -HostName $HostName -VMName $VMName 
+createVM -VMName $VMName -MemoryStartupBytes $MemoryStartupBytes -Generation $Generation -VMPath $VMPath -DiskName $DiskName -SwitchName $SwitchName 
+insertDVD -VMName $VMName -DVDISOFile $DVDISOFile 
+useDynamicMemory -VMName $VMName 
+numberOfProcessors -VMName $VMName -NumberOfProcessors $NumberOfProcesses 
