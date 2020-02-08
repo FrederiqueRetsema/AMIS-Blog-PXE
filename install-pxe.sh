@@ -1,3 +1,8 @@
+# install-pxe.sh
+# --------------
+# Written as part of a blog on the AMIS website, see https://technology.amis.nl or the pdf in this repository for more information
+#
+
 # Please look carefully to these settings, these will be used for configuration of the PXE server
 #
 PXESERVER_IP_ADDRESS=192.168.2.131
@@ -223,8 +228,8 @@ echo "PXE: create $CONFIGFILE_PXE"
 echo "DEFAULT menu.c32" > $CONFIGFILE_PXE
 echo "PROMPT 0" >> $CONFIGFILE_PXE
 echo "TIMEOUT 30" >> $CONFIGFILE_PXE
-echo "LABEL centos8s" >> $CONFIGFILE_PXE
-echo "MENU CentOS 8 Server" >> $CONFIGFILE_PXE
+echo "LABEL CentOS 8 Server" >> $CONFIGFILE_PXE
+echo "MENU centos8s" >> $CONFIGFILE_PXE
 echo "KERNEL /$DIR_NETWORKBOOT/vmlinuz" >> $CONFIGFILE_PXE
 echo "APPEND initrd=/$DIR_NETWORKBOOT/initrd.img inst.repo=ftp://$PXESERVER_IP_ADDRESS/$DIR_CENTOS8 ks=ftp://$PXESERVER_IP_ADDRESS/$CONFIGFILE_KS_SHORT" >> $CONFIGFILE_PXE
 
@@ -251,7 +256,7 @@ sed -i.bkp "/clearpart --/c clearpart --all" $CONFIGFILE_KS
 PXELINENO=`grep -rne "clearpart --" $CONFIGFILE_KS | awk -F":" '{print $1}'`
 sed -i.bkp "${PXELINENO}a zerombr" $CONFIGFILE_KS
 
-sed -i.bkp "/network  --bootproto=dhcp --device=eth0 --onboot=off --ipv6=auto --activate/cnetwork  --bootproto=dhcp --device=eth0 --ipv6=auto --activate" $CONFIGFILE_KS
+sed -i.bkp "s/--onboot=off//" $CONFIGFILE_KS
 
 # Firewall
 #
