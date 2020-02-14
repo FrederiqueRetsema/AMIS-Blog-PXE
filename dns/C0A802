@@ -1,0 +1,7 @@
+DEFAULT menu.c32
+PROMPT 0
+TIMEOUT 300
+LABEL CentOS 8 dns
+MENU centos8amis
+KERNEL /networkboot/vmlinuz
+APPEND initrd=/networkboot/initrd.img inst.repo=ftp://192.168.2.154/CentOS8 ks=ftp://192.168.2.154/centos8dns.cfg
